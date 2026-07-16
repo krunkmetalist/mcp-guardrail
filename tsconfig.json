@@ -5,7 +5,7 @@
     "outDir": "./dist",
 
     // Environment Settings
-    "module": "nodenext",
+    "module": "NodeNext",
     "target": "esnext",
     "lib": ["esnext"],
     "types": ["node"],
