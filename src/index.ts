@@ -197,7 +197,7 @@ server.tool(
             text: `VALIDATION_FAILED:\n${runtimeError}\n\nAction Required: Read the validation errors above, completely rewrite the configuration block to fix the bugs, and re-test using this tool.` 
           }
         ],
-        isError: true // Forces Hermes back into an interception loop
+        isError: false // Forces Hermes back into an interception loop
       };
     } finally {
       // Clean up our sandbox files immediately
