@@ -177,7 +177,7 @@ server.tool(
 
       // Build out the response string
       let successMessage = "SUCCESS: Configuration passed native schema validation checks.";
-      if (autoFixedDockerVersion) {
+      if (!autoFixedDockerVersion) {
         successMessage = `🛡️ **Guardrail Auto-Fix:** Stripped deprecated top-level 'version' string to conform to modern Docker Compose specifications.\n\nHere is your sanitized layout:\n\`\`\`yaml\n${adjustedCode.trim()}\n\`\`\``;
       }
 
