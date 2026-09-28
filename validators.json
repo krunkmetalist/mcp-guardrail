@@ -1,0 +1,19 @@
+{
+  "docker-compose": {
+    "extension": "yml",
+    "command": "docker compose -f {{FILE}} config -q",
+    "preProcess": "strip_docker_version"
+  },
+  "json": {
+    "extension": "json",
+    "native": "json_parse"
+  },
+  "python": {
+    "extension": "py",
+    "command": "python3 -m py_compile {{FILE}}"
+  },
+  "bash": {
+    "extension": "sh",
+    "command": "bash -n {{FILE}}"
+  }
+}

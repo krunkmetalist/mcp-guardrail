@@ -7,8 +7,15 @@ import * as os from "os";
 import * as path from "path";
 import { promisify } from "util";
 import { z } from "zod";
+import { fileURLToPath } from "url";
 
 const execPromise = promisify(exec);
+
+// Load the data-driven configuration
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const validatorsPath = path.join(__dirname, "..", "validators.json");
+const validatorsConfig = JSON.parse(fs.readFileSync(validatorsPath, "utf-8"));
 
 // Initialize the modern MCP Server
 const server = new McpServer({
@@ -16,12 +23,26 @@ const server = new McpServer({
     version: "0.1.0",
 });
 
+// Define supported validators dynamically based on the JSON file
+const SUPPORTED_LANGUAGES = Object.keys(validatorsConfig);
+
+// Read opt-in from environment variables (comma-separated list)
+const envOptIn = process.env.ENABLED_VALIDATORS;
+const activeLanguages = envOptIn
+    ? envOptIn.split(",").map(s => s.trim()).filter(l => SUPPORTED_LANGUAGES.includes(l))
+    : SUPPORTED_LANGUAGES;
+
+if (activeLanguages.length === 0) {
+    console.error("Error: No valid languages enabled in ENABLED_VALIDATORS.");
+    process.exit(1);
+}
+
 // Register the tool using the clean, modern inline API
 server.registerTool(
     "validate_and_format_code",
     {
         inputSchema: z.object({
-            language: z.enum(["docker-compose", "json"]).describe("The runtime/schema language target to test."),
+            language: z.enum(activeLanguages as [string, ...string[]]).describe(`The runtime/schema language target to test. Available: ${activeLanguages.join(", ")}`),
             code: z.string().describe("The raw configuration text block to validate.")
         })
     },
@@ -29,8 +50,10 @@ server.registerTool(
         let adjustedCode = code;
         let autoFixedDockerVersion = false;
 
-        // 1. Forced Self-Correction Guardrail for Docker Compose version tags
-        if (language === "docker-compose") {
+        const config = validatorsConfig[language];
+
+        // 1. Pre-processing hooks
+        if (config.preProcess === "strip_docker_version") {
             const versionRegex = /^(\s*["']?version["']?\s*:\s*["'].*?["']?\s*\n?)/m;
             if (versionRegex.test(adjustedCode)) {
                 adjustedCode = adjustedCode.replace(versionRegex, "");
@@ -39,29 +62,25 @@ server.registerTool(
         }
 
         // Set up a unique temp file path to run our static checks against
-        const ext = language === "docker-compose" ? "yml" : "json";
-        const tempFile = path.join(os.tmpdir(), `temp_guardrail_test_${crypto.randomUUID()}.${ext}`);
+        const tempFile = path.join(os.tmpdir(), `temp_guardrail_test_${crypto.randomUUID()}.${config.extension}`);
 
         try {
             // Write down the evaluated configuration to disk
             fs.writeFileSync(tempFile, adjustedCode, "utf-8");
 
-            // Route to the appropriate local verification method
-            if (language === "docker-compose") {
-                // Leverages the machine's native docker engine parser
-                await execPromise(`docker compose -f ${tempFile} config -q`);
-            } else if (language === "json") {
-                // Native V8 Engine verification
+            // Route to the appropriate local verification method dynamically
+            if (config.command) {
+                const cmd = config.command.replace("{{FILE}}", tempFile);
+                await execPromise(cmd);
+            } else if (config.native === "json_parse") {
                 JSON.parse(adjustedCode);
             }
 
             // Build out the response string
             let successMessage = "SUCCESS: Configuration passed native schema validation checks.";
-            //   if (autoFixedDockerVersion) {
-            //     successMessage = `🛡️ **Guardrail Auto-Fix:** Stripped deprecated top-level 'version' string to conform to modern Docker Compose specifications.\n\nHere is your sanitized layout:\n\`\`\`yaml\n${adjustedCode.trim()}\n\`\`\``;
-            //   }
+
+            // Forced Self-Correction Guardrail for Docker Compose
             if (autoFixedDockerVersion) {
-                successMessage = `🛡️ **Guardrail Auto-Fix:** Stripped deprecated top-level 'version' string to conform to modern Docker Compose specifications.\n\nHere is your sanitized layout:\n\`\`\`yaml\n${adjustedCode.trim()}\n\`\`\``;
                 return {
                     content: [{
                         type: "text",
