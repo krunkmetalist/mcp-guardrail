@@ -1,7 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { exec } from "child_process";
+import * as crypto from "crypto";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import { promisify } from "util";
 import { z } from "zod";
@@ -27,7 +29,7 @@ server.registerTool(
         let adjustedCode = code;
         let autoFixedDockerVersion = false;
 
-        // 1. Silent Guardrail Auto-Correct for Docker Compose version tags
+        // 1. Forced Self-Correction Guardrail for Docker Compose version tags
         if (language === "docker-compose") {
             const versionRegex = /^(\s*["']?version["']?\s*:\s*["'].*?["']?\s*\n?)/m;
             if (versionRegex.test(adjustedCode)) {
@@ -38,7 +40,7 @@ server.registerTool(
 
         // Set up a unique temp file path to run our static checks against
         const ext = language === "docker-compose" ? "yml" : "json";
-        const tempFile = path.join(process.cwd(), `temp_guardrail_test_${Date.now()}.${ext}`);
+        const tempFile = path.join(os.tmpdir(), `temp_guardrail_test_${crypto.randomUUID()}.${ext}`);
 
         try {
             // Write down the evaluated configuration to disk

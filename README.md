@@ -41,7 +41,22 @@ npm run build
 node dist/index.js
 ```
 
-## Using with an MCP Client (e.g., Claude Desktop)
+## Client Configuration
+
+Because MCP is a standardized protocol, you can use this server with any compatible client. Below are configuration examples for a few popular clients.
+
+### Using with Hermes
+You can integrate this server into a Hermes agent. By running `hermes config edit`, you can set the path and the tool name for the agent in your configuration:
+
+```yaml
+mcp_servers:
+  guardrail-validator:
+    command: node
+    args:
+      - /absolute/path/to/guardrail-mcp-validator/dist/index.js
+```
+
+### Using with Claude Desktop (Example)
 To use this with an MCP-compatible client like Claude Desktop, add it to your configuration file (usually `claude_desktop_config.json`):
 
 ```json
@@ -62,4 +77,4 @@ To use this with an MCP-compatible client like Claude Desktop, add it to your co
 * `code` (string): The raw configuration text block to validate.
 
 ## License
-ISC License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
